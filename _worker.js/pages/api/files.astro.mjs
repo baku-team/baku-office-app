@@ -1,0 +1,42 @@
+globalThis.process ??= {}; globalThis.process.env ??= {};
+import { getSession } from '../../chunks/auth_ujH5pbJJ.mjs';
+import { softDeleteFile, audit, saveFile } from '../../chunks/storage_Zv-sLn8E.mjs';
+export { renderers } from '../../renderers.mjs';
+
+const prerender = false;
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+const POST = async ({ request, locals }) => {
+  const env = locals.runtime.env;
+  const ses = await getSession(env, request);
+  if (!ses) return json({ error: "ログインが必要" }, 401);
+  const ct = request.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    const b = await request.json().catch(() => ({}));
+    if (b._action === "delete" && b.id) {
+      await softDeleteFile(env, b.id);
+      await audit(env, ses.uid, "file.delete", b.id);
+      return json({ ok: true });
+    }
+    return json({ error: "不明な操作" }, 400);
+  }
+  const form = await request.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) return json({ error: "file がありません" }, 400);
+  try {
+    const r = await saveFile(env, file, ses.uid);
+    await audit(env, ses.uid, "file.upload", r.id);
+    return json({ ok: true, id: r.id, mode: r.mode });
+  } catch (e) {
+    return json({ error: e.message }, 400);
+  }
+};
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  POST,
+  prerender
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };
