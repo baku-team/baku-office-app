@@ -1,0 +1,35 @@
+globalThis.process ??= {}; globalThis.process.env ??= {};
+import { getSession } from '../../chunks/auth_BDOdme1H.mjs';
+import { entitlementForGate } from '../../chunks/client_DjSYVqc9.mjs';
+import '../../chunks/crypto_D21r3Dwx.mjs';
+import { atLeast } from '../../chunks/index_Cg172zdv.mjs';
+import { ghDeviceStart, ghDevicePoll, ghListRepos, saveAutonomyConfig } from '../../chunks/autonomy_CKEyr57X.mjs';
+export { renderers } from '../../renderers.mjs';
+
+const prerender = false;
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+const POST = async ({ request, locals }) => {
+  const env = locals.runtime.env;
+  const ses = await getSession(env, request);
+  if (!ses || ses.role !== "admin" || ses.ctx !== "org") return json({ error: "管理者のみ" }, 403);
+  if (!atLeast(await entitlementForGate(env), "pro")) return json({ error: "オートパイロットは Pro 以上で利用できます" }, 403);
+  const b = await request.json().catch(() => ({}));
+  if (b._action === "gh_start") return json(await ghDeviceStart(env));
+  if (b._action === "gh_poll") return json(await ghDevicePoll(env, String(b.deviceCode ?? "")));
+  if (b._action === "gh_repos") return json({ ok: true, repos: await ghListRepos(env) });
+  if (b._action === "set_repo") {
+    await saveAutonomyConfig(env, { ghRepo: String(b.repo ?? "") });
+    return json({ ok: true });
+  }
+  return json({ error: "不明な操作" }, 400);
+};
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  POST,
+  prerender
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };
