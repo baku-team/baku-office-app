@@ -1,0 +1,147 @@
+globalThis.process ??= {};
+globalThis.process.env ??= {};
+import { c as createComponent } from "./astro-component_Dn7U0_eq.mjs";
+import { r as renderTemplate, m as maybeRenderHead, F as Fragment, a as addAttribute } from "./sequence_I_kcixDX.mjs";
+import { r as renderComponent } from "./worker-entry_CKv81zE0.mjs";
+import { env } from "cloudflare:workers";
+import { $ as $$App } from "./App_DSFhzdB-.mjs";
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(cooked.slice()) }));
+var _a;
+const prerender = false;
+const $$GoogleSetup = createComponent(async ($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$props, $$slots);
+  Astro2.self = $$GoogleSetup;
+  const { getSession } = await import("./auth_envvDei8.mjs");
+  const ses = await getSession(env, Astro2.request);
+  if (!ses) return Astro2.redirect("/login", 302);
+  const isAdmin = ses.role === "admin" && ses.ctx === "org";
+  const { googleConfigured, googleStatus, SCOPE_GROUPS } = await import("./google_BdyuSNZe.mjs");
+  const { hasApiKey } = await import("./client_CXgE4FGk.mjs");
+  const configured = isAdmin ? await googleConfigured(env) : false;
+  const { getServiceAccountInfo } = await import("./google-sa_DkW3XfbM.mjs");
+  const saInfo = isAdmin ? await getServiceAccountInfo(env).catch(() => null) : null;
+  const gstatus = isAdmin ? await googleStatus(env).catch(() => null) : null;
+  const grantedSet = new Set(gstatus?.groups ?? []);
+  const orgEmail = isAdmin ? await env.LICENSE.get("org_google_email") ?? "" : "";
+  const groupList = Object.keys(SCOPE_GROUPS).map((g) => ({ id: g, label: SCOPE_GROUPS[g].label, restricted: SCOPE_GROUPS[g].restricted, scopes: SCOPE_GROUPS[g].scopes.join(" ") }));
+  const CLOUDSHELL_REPO = "https://github.com/baku-team/baku-office-app";
+  const cloudshellUrl = "https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=" + encodeURIComponent(CLOUDSHELL_REPO) + "&cloudshell_workspace=cloudshell&cloudshell_tutorial=tutorial.md";
+  const bySecret = { id: !!env.GOOGLE_CLIENT_ID, secret: !!env.GOOGLE_CLIENT_SECRET };
+  const allGoogleBySecret = bySecret.id && bySecret.secret;
+  const status = {
+    id: bySecret.id || await hasApiKey(env, "google_client_id"),
+    secret: bySecret.secret || await hasApiKey(env, "google_client_secret")
+  };
+  const redirectUri = `${Astro2.url.origin}/api/google/callback`;
+  const allScopes = Object.keys(SCOPE_GROUPS).flatMap(
+    (g) => SCOPE_GROUPS[g].scopes.map((s) => ({ scope: s, label: SCOPE_GROUPS[g].label, restricted: SCOPE_GROUPS[g].restricted }))
+  );
+  return renderTemplate`${renderComponent($$result, "App", $$App, { "title": "Google連携セットアップ", "active": "/settings/keys" }, { "default": async ($$result2) => renderTemplate` ${maybeRenderHead()}<h1>Google 連携セットアップ</h1> ${!isAdmin && renderTemplate`<div class="card"><div class="banner banner-warn">この画面は管理者のみ利用できます。</div></div>`}${isAdmin && renderTemplate`${renderComponent($$result2, "Fragment", Fragment, {}, { "default": async ($$result3) => renderTemplate` <div class="banner banner-info">
+連携方法は2つあります。<strong>Google Workspace をお使いなら「サービスアカウント」方式がおすすめ</strong>です（下のボタンの <strong>Cloud Shell でほぼ自動</strong>・残る手動は管理コンソールでの委任承認1回のみ）。個人 Gmail など Workspace 以外は「OAuth」方式（クライアントID/シークレットの作成だけ手動）。<strong>下のタブで方法を選んでください。</strong> </div> ${configured ? renderTemplate`<div class="banner banner-ok">✅ すでに Google 連携は設定済みです（方式：${gstatus?.mode === "sa" ? "サービスアカウント" : gstatus?.mode === "oauth" ? "OAuth" : "—"}）。各機能の連携は <a href="/calendar">カレンダー</a> / <a href="/gmail">Gmail</a> / <a href="/meet">Meet</a> の画面から行えます。</div>` : renderTemplate`<div class="banner banner-warn">未設定です。下のいずれかの方法で設定してください。</div>`}<div class="seg" id="gmethod" role="group" aria-label="連携方法の選択" style="margin:.6rem 0"> <button class="seg-opt on" type="button" data-m="sa">サービスアカウント（Workspace・おすすめ）</button> <button class="seg-opt" type="button" data-m="oauth">OAuthクライアント（個人Gmail等）</button> </div> <div class="gpanel" data-panel="sa"> <div class="banner banner-info">Google Workspace を使う組織向け。<strong>OAuth クライアントID/シークレットや同意画面は不要</strong>です。サービスアカウントの鍵（gcloud で自動生成可）を登録し、管理コンソールで「ドメイン全体の委任」を<strong>一度だけ</strong>承認すれば連携できます。</div> ${saInfo && renderTemplate`<div class="banner banner-ok">✅ サービスアカウント設定済み（代理ユーザー：${saInfo.subject}）。接続が不安定なら下の「接続テスト」で確認してください。</div>`} <ol class="steps"> <li> <h3>1. サービスアカウントと鍵を作成（自動）</h3> <p class="muted">下のボタンで <strong>Cloud Shell（ブラウザ内ターミナル）</strong> が開きます。ログイン済み・インストール不要で、プロジェクト作成・API有効化・サービスアカウント作成・鍵(JSON)発行までを自動実行し、手順ガイドも表示されます。</p> <a class="btn btn-primary"${addAttribute(cloudshellUrl, "href")} target="_blank" rel="noopener">▶ Cloud Shell で開いて自動セットアップ ↗</a> <p class="muted" style="font-size:.82rem;margin-top:6px">開いたら「Authorize（承認）」→ ガイドのステップ1の実行ボタン（▶）を押すだけです。完了後に表示される<strong>鍵(JSON)</strong>・<strong>クライアントID</strong>・<strong>スコープ</strong>を次の手順で使います。</p> <details class="adv" style="margin-top:6px"><summary>自分の端末の gcloud で実行する場合</summary> <pre style="background:#0f172a;color:#e2e8f0;padding:.8rem;border-radius:8px;overflow:auto;font-size:.8rem"><code>gcloud auth login
+scripts/google-service-account-setup.sh</code></pre> </details> </li> <li> <h3>2. 鍵と代理ユーザーを登録して接続</h3> <p class="muted">発行した鍵(JSON)を選び、Google の予定・メール等を「誰として」操作するか（Workspace 内のユーザーのメール）を入力します。</p> <div class="field"><label for="sa-file">サービスアカウント鍵（JSON）</label><input id="sa-file" type="file" accept="application/json,.json"></div> <div class="field"><label for="sa-paste">または鍵(JSON)を貼り付け</label><textarea id="sa-paste" rows="4"${addAttribute('{ "type": "service_account", "client_email": "...", "private_key": "...", "client_id": "..." }', "placeholder")} style="width:100%;font-family:monospace;font-size:.78rem"></textarea><div class="muted" style="font-size:.8rem">Cloud Shell で <code>cat *-key.json</code> の出力をそのまま貼り付けできます。</div></div> <div class="field"><label for="sa-subject">代理するユーザーのメール（Workspace）</label><input id="sa-subject" type="email" placeholder="admin@yourdomain.co.jp"${addAttribute(saInfo?.subject ?? orgEmail, "value")} autocomplete="off"><div class="muted" style="font-size:.8rem">${orgEmail && !saInfo ? `ログイン中の団体アカウント（${orgEmail}）を既定表示しています。別ユーザーを代理させる場合は変更してください。` : "予定/メールを操作する Workspace ユーザーのメール。"}</div></div> <fieldset style="border:1px solid #dde3ea;border-radius:6px;padding:.5rem .8rem"> <legend class="muted" style="font-size:.85rem">利用する機能（委任するスコープ）</legend> ${groupList.map((g) => renderTemplate`<label style="display:block;margin:.2rem 0"><input type="checkbox" class="sa-grp"${addAttribute(g.id, "value")}${addAttribute(g.scopes, "data-scopes")}${addAttribute(grantedSet.has(g.id) || g.id === "calendar", "checked")}> ${g.label}${g.restricted ? renderTemplate`<span class="pill" style="background:#fee2e2;color:#b91c1c;margin-left:4px">審査対象</span>` : ""}</label>`)} </fieldset> <button class="btn btn-primary" id="sa-go" style="margin-top:.5rem">登録して接続テスト</button> <div id="sa-result" style="margin-top:.5rem"></div> </li> <li> <h3>3. 管理コンソールで「ドメイン全体の委任」を承認（1回のみ）</h3> <p class="muted">Google Workspace の超管理者が、下のクライアントIDと利用スコープを委任先として登録します（これは Google がセキュリティ上、人による承認を必須にしているため省略できません）。</p> <div class="field"><label>クライアントID（委任先）</label><div class="row"><input id="sa-cid" type="text" readonly${addAttribute(saInfo?.clientId ?? "（手順2を登録すると表示されます）", "value")} style="flex:1;font-family:monospace;font-size:.82rem"><button class="btn" id="sa-copy-cid" type="button"${addAttribute(!saInfo, "disabled")}>コピー</button></div></div> <div class="field"><label>OAuth スコープ（カンマ区切り・選択中の機能から自動生成）</label><div class="row"><input id="sa-scopes" type="text" readonly value="" style="flex:1;font-family:monospace;font-size:.78rem"><button class="btn" id="sa-copy-scopes" type="button">コピー</button></div></div> <a class="btn btn-primary" href="https://admin.google.com/ac/owl/domainwidedelegation" target="_blank" rel="noopener">ドメイン全体の委任の設定を開く ↗</a> </li> <li> <h3>4. 連携の確認・解除</h3> <p class="muted">手順2の「登録して接続テスト」が、委任の承認後にもう一度押すと接続テストまで行います（成功すれば連携完了）。連携をやめる場合は下のボタンで解除します。</p> <div class="row"><button class="btn btn-ghost" id="sa-disconnect" type="button"${addAttribute(!saInfo, "hidden")}>連携を解除</button></div> </li> </ol> </div> <div class="gpanel" data-panel="oauth" hidden> <ol class="steps"> <li> <h3>1. プロジェクトを作成（または選択）</h3> <p class="muted">Google Cloud に未作成ならプロジェクトを1つ作成します。</p> <a class="btn btn-primary" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">プロジェクト作成を開く ↗</a> </li> <li> <h3>2. 必要な API を有効化</h3> <p class="muted">使う機能の API だけで構いません（上のプロジェクトを選んでから各リンクで「有効にする」）。</p> <div class="row"> <a class="btn" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener">Calendar API ↗</a> <a class="btn" href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener">Gmail API ↗</a> <a class="btn" href="https://console.cloud.google.com/apis/library/meet.googleapis.com" target="_blank" rel="noopener">Meet API ↗</a> </div> </li> <li> <h3>3. OAuth 同意画面を設定</h3> <p class="muted">User Type は組織内利用なら「内部」、外部利用なら「外部」。アプリ名・サポートメールを入力し、下表のスコープを追加します。テスト段階は「テストユーザー」に連携する Google アカウントを追加してください。</p> <a class="btn btn-primary" href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener">同意画面を開く ↗</a> <div class="table-wrap" style="margin-top:.6rem"><table> <thead><tr><th>スコープ</th><th>用途</th><th>区分</th></tr></thead> <tbody> ${allScopes.map((s) => renderTemplate`<tr><td><code style="font-size:.78rem">${s.scope}</code></td><td>${s.label}</td><td>${s.restricted ? renderTemplate`<span class="pill" style="background:#fee2e2;color:#b91c1c" aria-label="Restricted（Google審査対象）">⚠ Restricted（審査対象）</span>` : "通常"}</td></tr>`)} </tbody> </table></div> <p class="muted">※ Gmail の閲覧/送信（Restricted）を外部公開アプリで使う場合、Google の審査が必要になることがあります。まず Calendar/Meet だけで始めるのが簡単です。</p> </li> <li> <h3>4. OAuth クライアント ID を作成</h3> <p class="muted">「アプリケーションの種類＝<strong>ウェブ アプリケーション</strong>」を選び、<strong>承認済みのリダイレクト URI</strong> に下の値をそのまま貼り付けます。</p> <div class="field"> <label>承認済みのリダイレクト URI（コピーして貼り付け）</label> <div class="row"><input id="redir" type="text" readonly${addAttribute(redirectUri, "value")} style="flex:1;font-family:monospace;font-size:.82rem"><button class="btn" id="copyRedir">コピー</button></div> </div> <a class="btn btn-primary" href="https://console.cloud.google.com/apis/credentials/oauthclient" target="_blank" rel="noopener">クライアント作成を開く ↗</a> </li> <li> <h3>5. 発行された ID / シークレットを登録</h3> <p class="muted">作成後に表示される<strong>クライアントID</strong>と<strong>クライアントシークレット</strong>を貼り付けて保存します（暗号化保存・再デプロイ不要）。</p> <div class="card"> <div class="field"><label>クライアントID <span class="muted">（${status.id ? "✓ 設定済み" : "未設定"}${bySecret.id ? "・Worker Secret" : ""}）</span></label><input id="gcid" name="google_client_id" type="text" placeholder="xxxxx.apps.googleusercontent.com" autocomplete="off"${addAttribute(bySecret.id, "disabled")}></div> <div class="field"><label>クライアントシークレット <span class="muted">（${status.secret ? "✓ 設定済み" : "未設定"}${bySecret.secret ? "・Worker Secret" : ""}）</span></label><input id="gcsec" name="google_client_secret" type="password" placeholder="GOCSPX-..." autocomplete="off"${addAttribute(bySecret.secret, "disabled")}></div> ${(bySecret.id || bySecret.secret) && renderTemplate`<p class="muted">Worker Secret で投入済みの項目は画面から変更できません（Secret が優先されます）。</p>`} <button class="btn btn-primary" id="saveGoogle"${addAttribute(allGoogleBySecret, "disabled")}${addAttribute(allGoogleBySecret ? "ID・シークレットは Worker Secret で設定済みのため、画面からは変更できません" : "", "title")}>保存</button> </div> </li> </ol> <p class="muted">うまくいかない場合：連携時に <code>error=token</code> 等が出るときは、ステップ4のリダイレクト URI 不一致（末尾スラッシュ・http/https・ドメイン違い）が最有力です。</p> <details> <summary>技術者向け：ステップ1〜2を gcloud で自動化</summary> <p class="muted">gcloud CLI が使える場合、プロジェクト作成と API 有効化はスクリプトで自動化できます（OAuth クライアント作成＝ステップ3〜5 は引き続き手動）。</p> <pre style="background:#0f172a;color:#e2e8f0;padding:.8rem;border-radius:8px;overflow:auto;font-size:.8rem"><code>gcloud auth login
+scripts/google-oauth-setup.sh</code></pre> <p class="muted">完了後、残りの手動ステップへのリンクと貼り付け用リダイレクト URI が出力されます。</p> </details> </div> <style>
+        .steps { list-style: none; padding: 0; counter-reset: none; }
+        .steps > li { background: #fff; border: 1px solid #e5e9ee; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: .8rem; }
+        .steps h3 { margin: 0 0 .3rem; }
+      </style> `, "scripts": async ($$result3) => renderTemplate(_a || (_a = __template([`<script slot="scripts">
+        // 連携方法の切替（サービスアカウント / OAuth）。
+        (function () {
+          const seg = document.getElementById("gmethod");
+          const panels = [...document.querySelectorAll(".gpanel")];
+          seg?.querySelectorAll(".seg-opt").forEach((b) => b.addEventListener("click", () => {
+            seg.querySelectorAll(".seg-opt").forEach((x) => x.classList.toggle("on", x === b));
+            panels.forEach((p) => { p.hidden = p.dataset.panel !== b.dataset.m; });
+          }));
+        })();
+        // サービスアカウント(DWD)連携。
+        (function () {
+          const grps = () => [...document.querySelectorAll(".sa-grp")].filter((c) => c.checked);
+          const syncScopes = () => { const el = document.getElementById("sa-scopes"); if (el) el.value = grps().map((c) => c.dataset.scopes).join(" ").split(" ").filter(Boolean).join(", "); };
+          document.querySelectorAll(".sa-grp").forEach((c) => c.addEventListener("change", syncScopes));
+          syncScopes();
+          let keyJson = "";
+          document.getElementById("sa-file")?.addEventListener("change", async (e) => { const f = e.target.files?.[0]; if (f) keyJson = await f.text(); });
+          // 鍵の取得元：ファイル選択を優先し、無ければ貼り付けテキストを使う。
+          const resolveKey = () => keyJson || (document.getElementById("sa-paste")?.value || "").trim();
+          const copy = async (id) => { const t = document.getElementById(id); try { await navigator.clipboard.writeText(t.value); window.bo?.toast?.("コピーしました"); } catch { t.select(); document.execCommand("copy"); } };
+          document.getElementById("sa-copy-cid")?.addEventListener("click", () => copy("sa-cid"));
+          document.getElementById("sa-copy-scopes")?.addEventListener("click", () => copy("sa-scopes"));
+          // connect_sa の応答から、手順3のクライアントID/スコープをリロード無しで埋める。
+          const fillSa = (sa) => {
+            if (!sa) return;
+            const cid = document.getElementById("sa-cid");
+            if (cid && sa.clientId) cid.value = sa.clientId;
+            document.getElementById("sa-copy-cid")?.removeAttribute("disabled");
+            syncScopes();
+          };
+          // 接続テストは「DWD未承認なら失敗」が想定内のため、bo.api の自動エラートーストを避け静かに判定する。
+          const testSa = async () => {
+            try { const r = await fetch("/api/google", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ _action: "test_sa" }) }); return r.ok; }
+            catch { return false; }
+          };
+          // 1ボタン集約：登録 → クライアントID/スコープ反映 → 接続テストまで。DWD承認後はもう一度押すと成功する。
+          document.getElementById("sa-go")?.addEventListener("click", async (e) => {
+            const subject = document.getElementById("sa-subject").value.trim();
+            const key = resolveKey();
+            if (!key) { window.bo.toast("鍵(JSON)をアップロードするか貼り付けてください", "err"); return; }
+            if (!subject) { window.bo.toast("代理するユーザーのメールを入力してください", "err"); return; }
+            const groups = grps().map((c) => c.value);
+            const r = await window.bo.api("/api/google", { _action: "connect_sa", keyJson: key, subject, groups }, { btn: e.currentTarget, successMsg: null });
+            if (!r.ok) return; // connect_sa の失敗は bo.api がトースト済み
+            fillSa(r.data?.sa);
+            const ok = await testSa();
+            document.getElementById("sa-disconnect")?.removeAttribute("hidden");
+            const box = document.getElementById("sa-result");
+            if (ok) {
+              if (box) box.innerHTML = '<div class="banner banner-ok">✅ 連携が完了しました（接続テスト成功）。</div>';
+              window.bo.toast("連携完了しました");
+            } else if (box) {
+              box.innerHTML = '<div class="banner banner-warn">登録しました。下の<strong>手順3</strong>でクライアントID・スコープをコピーして「ドメイン全体の委任」を承認したら、<strong>もう一度このボタン</strong>を押してください（自動で接続テストします）。</div>';
+            }
+          });
+          document.getElementById("sa-disconnect")?.addEventListener("click", async (e) => {
+            if (!(await window.bo.confirm("Google 連携を解除しますか？（サービスアカウント鍵を削除します）", { confirmLabel: "解除", danger: true }))) return;
+            const r = await window.bo.api("/api/google", { _action: "disconnect" }, { btn: e.currentTarget, successMsg: "解除しました" });
+            if (r.ok) setTimeout(() => location.reload(), 700);
+          });
+        })();
+        document.getElementById("copyRedir")?.addEventListener("click", async () => {
+          const t = document.getElementById("redir");
+          try { await navigator.clipboard.writeText(t.value); window.bo?.toast?.("コピーしました"); }
+          catch { t.select(); document.execCommand("copy"); }
+        });
+        document.getElementById("saveGoogle")?.addEventListener("click", async (e) => {
+          const inputs = ["gcid", "gcsec"].map((id) => document.getElementById(id)).filter(Boolean);
+          const editable = inputs.filter((i) => !i.disabled);
+          const data = {};
+          editable.forEach((i) => { if (i.value) data[i.name] = i.value; });
+          if (!Object.keys(data).length) {
+            // 入力可能な欄が無い＝Secret 投入済み。空欄のまま押した場合は入力を促す。
+            if (!editable.length) window.bo.toast("ID・シークレットは Worker Secret で設定済みのため、画面からは変更できません。", "info");
+            else window.bo.toast("クライアントID とシークレットを入力してください。", "err");
+            return;
+          }
+          const { ok, data: j } = await window.bo.api("/api/keys", data, { btn: e.currentTarget, successMsg: null });
+          if (!ok) return;
+          const res = j.result || {};
+          const anyFail = Object.values(res).some((v) => !v.ok);
+          window.bo.toast(anyFail ? "保存に失敗した項目があります" : "保存しました。連携画面から接続できます。", anyFail ? "err" : "ok");
+          if (!anyFail) setTimeout(() => location.reload(), 1000);
+        });
+      <\/script>`]))) })}`}` })}`;
+}, "/home/runner/work/baku-office/baku-office/apps/client/src/pages/settings/google-setup.astro", void 0);
+const $$file = "/home/runner/work/baku-office/baku-office/apps/client/src/pages/settings/google-setup.astro";
+const $$url = "/settings/google-setup";
+const _page = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: $$GoogleSetup,
+  file: $$file,
+  prerender,
+  url: $$url
+}, Symbol.toStringTag, { value: "Module" }));
+const page = () => _page;
+export {
+  page
+};
