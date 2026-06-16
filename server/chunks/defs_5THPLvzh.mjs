@@ -1,0 +1,108 @@
+globalThis.process ??= {};
+globalThis.process.env ??= {};
+const ICON_OPTIONS = [
+  { value: "", label: "（なし）" },
+  { value: "spark", label: "きらめき" },
+  { value: "check", label: "チェック" },
+  { value: "users", label: "人" },
+  { value: "calendar", label: "カレンダー" },
+  { value: "clock", label: "時計" },
+  { value: "pin", label: "ピン" },
+  { value: "mail", label: "メール" }
+];
+const BLOCK_DEFS = [
+  {
+    type: "hero",
+    label: "ヒーロー（大見出し）",
+    category: "見出し",
+    fields: [
+      { key: "eyebrow", label: "小見出し（英字など）", type: "text" },
+      { key: "title", label: "大見出し", type: "text" },
+      { key: "lead", label: "リード文", type: "textarea" },
+      { key: "primaryLabel", label: "主ボタンの文言", type: "text" },
+      { key: "primaryHref", label: "主ボタンのリンク", type: "text" },
+      { key: "secondaryLabel", label: "副ボタンの文言", type: "text" },
+      { key: "secondaryHref", label: "副ボタンのリンク", type: "text" },
+      { key: "image", label: "背景画像", type: "image" },
+      { key: "align", label: "配置", type: "select", options: [{ value: "left", label: "左寄せ" }, { value: "center", label: "中央" }] },
+      { key: "height", label: "高さ", type: "select", options: [{ value: "s", label: "小" }, { value: "m", label: "中" }, { value: "l", label: "大" }] }
+    ],
+    defaults: { eyebrow: "", title: "見出しを入力", lead: "", align: "left", height: "m" }
+  },
+  {
+    type: "richText",
+    label: "本文（自由テキスト）",
+    category: "コンテンツ",
+    fields: [
+      { key: "html", label: "本文（HTML可・サニタイズされます）", type: "richtext" },
+      { key: "width", label: "横幅", type: "select", options: [{ value: "narrow", label: "標準（読みやすい幅）" }, { value: "wide", label: "広め" }] }
+    ],
+    defaults: { html: "<p>ここに本文を入力します。見出しは ## ではなく &lt;h2&gt; などのHTMLで書けます。</p>", width: "narrow" }
+  },
+  {
+    type: "features",
+    label: "特徴（複数カラム）",
+    category: "コンテンツ",
+    fields: [
+      { key: "eyebrow", label: "小見出し", type: "text" },
+      { key: "heading", label: "見出し", type: "text" },
+      { key: "columns", label: "カラム数", type: "select", options: [{ value: "2", label: "2列" }, { value: "3", label: "3列" }, { value: "4", label: "4列" }] },
+      {
+        key: "items",
+        label: "項目",
+        type: "list",
+        max: 8,
+        item: [
+          { key: "icon", label: "アイコン", type: "icon" },
+          { key: "title", label: "見出し", type: "text" },
+          { key: "body", label: "説明", type: "textarea" }
+        ]
+      }
+    ],
+    defaults: { eyebrow: "", heading: "特徴", columns: "3", items: [{ icon: "spark", title: "見出し", body: "説明文を入力します。" }] }
+  },
+  {
+    type: "imageText",
+    label: "画像＋テキスト",
+    category: "コンテンツ",
+    fields: [
+      { key: "image", label: "画像", type: "image" },
+      { key: "title", label: "見出し", type: "text" },
+      { key: "body", label: "本文", type: "textarea" },
+      { key: "imageSide", label: "画像の位置", type: "select", options: [{ value: "left", label: "左" }, { value: "right", label: "右" }] },
+      { key: "buttonLabel", label: "ボタンの文言", type: "text" },
+      { key: "buttonHref", label: "ボタンのリンク", type: "text" }
+    ],
+    defaults: { title: "見出し", body: "説明文を入力します。", imageSide: "left" }
+  },
+  {
+    type: "events",
+    label: "イベント一覧",
+    category: "イベント",
+    fields: [
+      { key: "heading", label: "見出し", type: "text" },
+      { key: "mode", label: "表示", type: "select", options: [{ value: "all", label: "公開中すべて" }, { value: "featured", label: "指定1件（slug）" }] },
+      { key: "limit", label: "最大表示数", type: "number" },
+      { key: "slug", label: "指定イベントの slug（featured時）", type: "text" }
+    ],
+    defaults: { heading: "開催イベント", mode: "all", limit: 6 }
+  },
+  {
+    type: "cta",
+    label: "CTA（行動喚起）",
+    category: "CTA",
+    fields: [
+      { key: "heading", label: "見出し", type: "text" },
+      { key: "body", label: "本文", type: "textarea" },
+      { key: "buttonLabel", label: "ボタンの文言", type: "text" },
+      { key: "buttonHref", label: "ボタンのリンク", type: "text" }
+    ],
+    defaults: { heading: "ご参加をお待ちしています", buttonLabel: "申し込む", buttonHref: "#" }
+  }
+];
+const blockDef = (type) => BLOCK_DEFS.find((d) => d.type === type);
+export {
+  BLOCK_DEFS,
+  ICON_OPTIONS,
+  blockDef
+};
