@@ -1,0 +1,84 @@
+globalThis.process ??= {};
+globalThis.process.env ??= {};
+import { getApiKey } from "./client_BXVeeS3h.mjs";
+import { e as cfEgressGateway, l as linePush, f as processAppBuilds } from "./cf-adapter_CFIfihMj.mjs";
+import { d as dueReminders, m as markReminderDone } from "./invoices_Cm4Zc-nT.mjs";
+import { p as processSummaryJobs } from "./media-ai_DBWNifyL.mjs";
+import { pollVideoJobs } from "./capabilities_BPQd_5aE.mjs";
+import { processAgentJobs } from "./agent-jobs_DAE_3UzW.mjs";
+import { reclaimStaleApprovals } from "./approvals_JGw45ks-.mjs";
+import { runDueScheduledTasks } from "./scheduled-tasks_CDVUjNgI.mjs";
+import { guardHeavy } from "./diag_Cu0HTcAn.mjs";
+import { getDriveBackup, driveConnected, backupToDrive, uploadBufferToDrive } from "./drive_4ucyCgKc.mjs";
+import { getBackupSchedule, backupAlert, buildBackup, backupFileName, recordBackupDone } from "./backup_aWt9p5CI.mjs";
+import { flushReports } from "./reports_BtN9dNxB.mjs";
+import { addNotification, pushWebhook } from "./notifications_CdoRv0_M.mjs";
+import { getNotifyWebhook } from "./settings_D2rjJD-A.mjs";
+import { purgeFiles } from "./storage_CpD6nnHA.mjs";
+import { env } from "cloudflare:workers";
+const prerender = false;
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+const POST = async ({ request, locals }) => {
+  if (!env.INTERNAL_KEY || request.headers.get("x-internal-key") !== env.INTERNAL_KEY) return json({ error: "forbidden" }, 403);
+  const g = await guardHeavy(env, "summary jobs", () => processSummaryJobs(env));
+  const summarized = g.ok ? g.value : 0;
+  const st = await guardHeavy(env, "scheduled tasks", () => runDueScheduledTasks(locals.ctx, new URL(request.url).origin));
+  const scheduled = st.ok ? st.value : 0;
+  const aj = await guardHeavy(env, "agent jobs", () => processAgentJobs(locals.ctx, new URL(request.url).origin));
+  const agentJobs = aj.ok ? aj.value : 0;
+  const ab = await guardHeavy(env, "app builds", () => processAppBuilds(locals.ctx, new URL(request.url).origin));
+  const appBuilds = ab.ok ? ab.value.processed : 0;
+  const ra = await guardHeavy(env, "reclaim approvals", () => reclaimStaleApprovals(env));
+  const approvalsReclaimed = ra.ok ? ra.value : 0;
+  const accessToken = await getApiKey(env, "line_token");
+  const vr = await guardHeavy(env, "video jobs", () => pollVideoJobs(env, accessToken ?? void 0));
+  const video = vr.ok ? vr.value : { done: 0, pending: 0 };
+  let sent = 0, notified = 0;
+  const notifyWebhook = await getNotifyWebhook(env);
+  const gw = cfEgressGateway(env);
+  for (const r of await dueReminders(locals.ctx)) {
+    const userId = r.owner.startsWith("line:") ? r.owner.slice(5) : null;
+    if (userId) {
+      if (!accessToken) continue;
+      await linePush(gw, accessToken, userId, `⏰ リマインド：${r.content}`);
+      sent++;
+    } else {
+      await addNotification(locals.ctx, { owner: r.owner, kind: "reminder", body: `⏰ ${r.content}`, link: "/invoices" });
+      if (notifyWebhook) await pushWebhook(gw, notifyWebhook, `⏰ リマインド：${r.content}`).catch(() => {
+      });
+      notified++;
+    }
+    await markReminderDone(locals.ctx, r.id);
+  }
+  let driveBackup = { uploaded: 0 };
+  if ((await getDriveBackup(env)).enabled) {
+    const dr = await guardHeavy(env, "drive backup", () => backupToDrive(env, 5));
+    if (dr.ok) driveBackup = dr.value;
+  }
+  let fullBackup = { uploaded: false };
+  const sched = await getBackupSchedule(env);
+  if (sched.enabled && await driveConnected(env) && (await backupAlert(env)).alert) {
+    const bk = await guardHeavy(env, "full backup", async () => {
+      const { json: body, tables, files } = await buildBackup(env, { decrypt: sched.mode === "decrypted" });
+      const up = await uploadBufferToDrive(env, backupFileName(sched.mode === "decrypted"), "application/json", new TextEncoder().encode(body).buffer);
+      if (!up.ok) throw new Error(up.error ?? "upload failed");
+      await recordBackupDone(env, "drive", sched.mode, tables, files);
+      return true;
+    });
+    fullBackup = bk.ok ? { uploaded: true } : { uploaded: false, error: bk.error };
+  }
+  const fr = await guardHeavy(env, "flush reports", () => flushReports(env));
+  const reportsSent = fr.ok ? fr.value : 0;
+  const pf = await guardHeavy(env, "purge files", () => purgeFiles(env));
+  const purged = pf.ok ? pf.value : { expired: 0, purged: 0 };
+  return json({ ok: true, sent, notified, summarized, scheduled, video, agentJobs, appBuilds, approvalsReclaimed, driveBackup, fullBackup, reportsSent, purged });
+};
+const _page = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST,
+  prerender
+}, Symbol.toStringTag, { value: "Module" }));
+const page = () => _page;
+export {
+  page
+};
