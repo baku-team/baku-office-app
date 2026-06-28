@@ -1,0 +1,36 @@
+globalThis.process ??= {};
+globalThis.process.env ??= {};
+import { env } from "cloudflare:workers";
+import { rateLimited } from "./public-pages_BgLGyBVf.mjs";
+import { sha256hex } from "./sites_Bd_ikG73.mjs";
+import { i as inferApp } from "./ctx_CCwYpYbr.mjs";
+import { kvPut } from "./kv_CLOebsry.mjs";
+const prerender = false;
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+const LANG_NAME = { en: "English", zh: "中文（簡体字）", ko: "한국어", ja: "日本語", fr: "Français", es: "Español" };
+const POST = async ({ request }) => {
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (await rateLimited(env, ip)) return json({ error: "rate limited" }, 429);
+  const b = await request.json().catch(() => ({}));
+  const text = String(b.text ?? "").slice(0, 8e3).trim();
+  const lang = String(b.lang ?? "").toLowerCase();
+  if (!text || !LANG_NAME[lang]) return json({ error: "text と対応言語(lang) が必要です" }, 400);
+  const key = "tr:" + (await sha256hex(lang + ":" + text)).slice(0, 40);
+  const cached = await env.LICENSE.get(key);
+  if (cached) return json({ ok: true, text: cached, cached: true });
+  const out = await inferApp(env, `次のテキストを ${LANG_NAME[lang]} に翻訳してください。訳文だけを出力（注釈・前置きなし）。
+
+${text}`, { maxTokens: 2e3 });
+  if (!out) return json({ error: "翻訳できませんでした（AI連携が必要です）。" }, 400);
+  await kvPut(env, key, out, { expirationTtl: 30 * 86400 }).catch(() => void 0);
+  return json({ ok: true, text: out });
+};
+const _page = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST,
+  prerender
+}, Symbol.toStringTag, { value: "Module" }));
+const page = () => _page;
+export {
+  page
+};
